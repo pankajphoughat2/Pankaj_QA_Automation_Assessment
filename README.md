@@ -150,20 +150,6 @@ Then open `reports/performance/Pankaj_JMeter_HTML_Report/index.html`. The `-o` f
 
 > The target is a shared public demo, so keep the load light.
 
-## Use of AI tools
-
-As required by the assessment, AI tools were used while building this solution:
-
-- **Claude Code (Anthropic)** was used as an AI pair-programmer to:
-  - scaffold the Playwright framework and POM classes
-  - identify OrangeHRM locators and REST API endpoints
-  - draft the README
-  - generate the JMeter test plan
-  - debug issues, for example a JMeter/Groovy incompatibility with Java 23, which was fixed by switching to core JMeter elements
-- All AI-generated code was reviewed, run and verified by me against the live demo:
-  - the Playwright run passes
-  - the JMeter run passes all samplers with 0% errors
-
 > Note: the OrangeHRM demo is a shared public instance that is reset from time to time. If the Job Title or
 > Employment Status in `employees.json` / `Pankaj_employees.csv` is ever removed from the demo, change them to any
 > value listed under *Admin > Job*.
