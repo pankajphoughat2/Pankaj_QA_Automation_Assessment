@@ -1,0 +1,25 @@
+{
+  "name": "orangemantra_pankaj",
+  "version": "1.0.0",
+  "description": "Playwright (JS) UI + API automation of the OrangeHRM Employee Lifecycle scenario",
+  "scripts": {
+    "test": "playwright test",
+    "posttest": "node scripts/archive-artifacts.js",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report playwright-report",
+    "archive": "node scripts/archive-artifacts.js",
+    "install:browsers": "playwright install chromium"
+  },
+  "keywords": [],
+  "author": "Pankaj",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4"
+  }
+}

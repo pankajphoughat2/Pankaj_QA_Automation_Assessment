@@ -1,0 +1,4 @@
+firstName,lastName,empIdPrefix,jobTitle,employmentStatus
+Perf,UserOne,JM,Database Administrator,Full-Time Permanent
+Perf,UserTwo,JM,Database Administrator,Full-Time Contract
+Perf,UserThree,JM,Chief Technical Officer,Full-Time Probation

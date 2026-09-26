@@ -1,0 +1,13 @@
+[
+  {
+    "testCase": "Full-time QA engineer lifecycle",
+    "firstName": "Pankaj",
+    "lastName": "Automation",
+    "employeeIdPrefix": "QA",
+    "profilePicture": "files/profile-picture.png",
+    "update": {
+      "jobTitle": "Database Administrator",
+      "employmentStatus": "Full-Time Permanent"
+    }
+  }
+]

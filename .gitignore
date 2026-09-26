@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Local environment overrides
+.env
+
+# Raw Playwright output (latest run is archived into reports/ by `npm test`)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# JMeter GUI/CLI log (written next to where JMeter is started)
+jmeter.log
