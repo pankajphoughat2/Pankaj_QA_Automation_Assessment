@@ -1,0 +1,137 @@
+name: Employee lifecycle e2e
+
+# Triggered from the runner UI (trigger-ui/) via workflow_dispatch, or by a push to main.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'trigger-ui/**'
+      - 'README.md'
+
+permissions:
+  contents: write
+
+# One run at a time: the public demo is shared and gh-pages is rewritten on every publish.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+env:
+  KEEP_RUNS: 10
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      result: ${{ steps.tests.outcome }}
+    steps:
+      # Step names are read by trigger-ui/src/worker.js to show progress; keep them in sync.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        id: tests
+        continue-on-error: true
+        run: npx playwright test
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-evidence
+          retention-days: 30
+          path: |
+            playwright-report/
+            test-results/
+
+      - name: Fail if tests failed
+        if: steps.tests.outcome != 'success'
+        run: exit 1
+
+  publish:
+    name: Publish report
+    needs: test
+    if: always() && needs.test.result != 'cancelled' && needs.test.result != 'skipped'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-evidence
+          path: evidence
+
+      - name: Checkout gh-pages
+        run: |
+          git init site
+          cd site
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          if git fetch --depth 1 origin gh-pages; then git checkout -q FETCH_HEAD; fi
+
+      - name: Add this run and keep the last ${{ env.KEEP_RUNS }}
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RESULT: ${{ needs.test.outputs.result }}
+          SHA: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -e
+          dest="site/runs/$RUN_ID"
+          rm -rf "$dest" && mkdir -p "$dest"
+          cp -r evidence/playwright-report/. "$dest/"
+
+          # Standalone video copies, so the UI can play them without opening the report
+          i=0
+          videos=()
+          while IFS= read -r v; do
+            i=$((i+1))
+            cp "$v" "$dest/video-$i.webm"
+            videos+=("video-$i.webm")
+          done < <(find evidence/test-results -name '*.webm' 2>/dev/null | sort)
+
+          node - "$RUN_ID" "$RESULT" "$SHA" "$EVENT" "${videos[@]}" <<'EOF'
+          const fs = require('fs');
+          const [runId, result, sha, event, ...videos] = process.argv.slice(2);
+          const keep = Number(process.env.KEEP_RUNS);
+          const file = 'site/runs.json';
+          let runs = [];
+          try { runs = JSON.parse(fs.readFileSync(file, 'utf8')).runs || []; } catch {}
+          runs = runs.filter((r) => r.runId !== runId);
+          runs.unshift({ runId, result: result === 'success' ? 'passed' : 'failed', sha, event, videos, publishedAt: new Date().toISOString() });
+          const kept = runs.slice(0, keep);
+          for (const old of runs.slice(keep)) fs.rmSync(`site/runs/${old.runId}`, { recursive: true, force: true });
+          // Drop folders no longer in the index (e.g. from a failed earlier publish)
+          const ids = new Set(kept.map((r) => r.runId));
+          for (const dir of fs.readdirSync('site/runs')) if (!ids.has(dir)) fs.rmSync(`site/runs/${dir}`, { recursive: true, force: true });
+          fs.writeFileSync(file, JSON.stringify({ runs: kept }, null, 2));
+          fs.writeFileSync('site/index.html',
+            `<!doctype html><meta charset="utf-8"><title>Latest report</title>` +
+            `<meta http-equiv="refresh" content="0; url=runs/${kept[0].runId}/">` +
+            `<a href="runs/${kept[0].runId}/">Latest report</a>`);
+          fs.writeFileSync('site/.nojekyll', '');
+          EOF
+
+      - name: Push to gh-pages
+        run: |
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Orphan commit each time so old videos don't pile up in git history
+          git checkout -q --orphan publish
+          git add -A
+          git commit -q -m "Report for run ${{ github.run_id }}"
+          git push -f origin publish:gh-pages

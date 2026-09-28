@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HRM Test Runner</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='3' width='26' height='26' rx='7' fill='%23F26B1D'/%3E%3Cpath d='M12 10v12l10-6z' fill='white'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter+Tight:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --surface: #ffffff;
+    --sunken: #f0ede7;
+    --line: #e2ddd4;
+    --text: #1d1b18;
+    --muted: #6e685f;
+    --accent: #e8611a;
+    --accent-soft: rgba(232, 97, 26, 0.12);
+    --on-accent: #ffffff;
+    --pass: #1f8a55;
+    --pass-soft: rgba(31, 138, 85, 0.12);
+    --fail: #c8372d;
+    --fail-soft: rgba(200, 55, 45, 0.11);
+    --pending: #cfc8bc;
+    --shadow: 0 1px 2px rgba(40, 30, 10, 0.05), 0 8px 24px rgba(40, 30, 10, 0.05);
+    --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+    --ui: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121417;
+      --surface: #1a1d21;
+      --sunken: #202429;
+      --line: #2c3137;
+      --text: #ecebe8;
+      --muted: #9a9ea5;
+      --accent: #ff7a33;
+      --accent-soft: rgba(255, 122, 51, 0.15);
+      --on-accent: #1a0c03;
+      --pass: #4fcf8b;
+      --pass-soft: rgba(79, 207, 139, 0.13);
+      --fail: #ff6f63;
+      --fail-soft: rgba(255, 111, 99, 0.13);
+      --pending: #3d434a;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121417; --surface: #1a1d21; --sunken: #202429; --line: #2c3137; --text: #ecebe8; --muted: #9a9ea5;
+    --accent: #ff7a33; --accent-soft: rgba(255, 122, 51, 0.15); --on-accent: #1a0c03; --pass: #4fcf8b;
+    --pass-soft: rgba(79, 207, 139, 0.13); --fail: #ff6f63; --fail-soft: rgba(255, 111, 99, 0.13); --pending: #3d434a; --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--ui); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  .hidden { display: none !important; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 0 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+  .brand svg { width: 26px; height: 26px; flex: none; }
+  .brand small { font-weight: 500; color: var(--muted); margin-left: 4px; }
+  .gh { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; padding: 6px 10px; border-radius: 10px; }
+  .gh:hover { color: var(--text); background: var(--sunken); }
+  .gh svg { width: 18px; height: 18px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+
+  /* Hero: timer + stages */
+  .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0; overflow: hidden; }
+  .hero-main { padding: clamp(20px, 4vw, 36px); }
+  .hero-side { padding: clamp(20px, 4vw, 36px); background: var(--sunken); border-left: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+  .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.015em; }
+  .target { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+  .target code { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 2px 10px 2px 8px; border-radius: 999px; background: var(--sunken); color: var(--muted); white-space: nowrap; }
+  .chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chip.running { background: var(--accent-soft); color: var(--accent); }
+  .chip.passed { background: var(--pass-soft); color: var(--pass); }
+  .chip.failed { background: var(--fail-soft); color: var(--fail); }
+
+  .timer { font-family: var(--mono); font-weight: 600; font-size: clamp(76px, 13vw, 144px); line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; margin: 28px 0 16px; transition: color .3s; }
+  .timer.running { color: var(--accent); }
+  .timer.failed { color: var(--fail); }
+  .caption { margin: 0; color: var(--muted); font-size: 16px; max-width: 44ch; min-height: 3em; }
+  .caption strong { color: var(--text); font-weight: 600; }
+  .bar { height: 5px; border-radius: 5px; background: var(--sunken); margin-top: 20px; overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width 1s linear; }
+  .bar.passed span { background: var(--pass); }
+  .bar.failed span { background: var(--fail); }
+
+  .stages { list-style: none; margin: 0; padding: 0; }
+  .stages li { display: grid; grid-template-columns: 22px 1fr; gap: 14px; position: relative; padding-bottom: 16px; }
+  .stages li:last-child { padding-bottom: 0; }
+  .stages li::after { content: ""; position: absolute; left: 10px; top: 24px; bottom: 2px; width: 2px; background: var(--line); }
+  .stages li:last-child::after { display: none; }
+  .stages li.done::after { background: var(--pass); }
+  .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--pending); background: var(--surface); display: grid; place-items: center; position: relative; z-index: 1; }
+  .dot svg { width: 12px; height: 12px; position: absolute; opacity: 0; }
+  .stage-name { font-weight: 600; line-height: 22px; }
+  .stage-name span { display: block; color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; }
+  li.pending .stage-name { color: var(--muted); }
+  li.active .dot { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); animation: pulse 1.6s ease-in-out infinite; }
+  li.done .dot { border-color: var(--pass); background: var(--pass); }
+  li.done .dot .ok { opacity: 1; }
+  li.failed .dot { border-color: var(--fail); background: var(--fail); }
+  li.failed .dot .no { opacity: 1; }
+  li.failed .stage-name { color: var(--fail); }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 9px transparent; } }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font-weight: 600; text-decoration: none; cursor: pointer; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-size: 16px; min-height: 54px; padding: 0 26px; }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.quiet { background: none; border-color: transparent; color: var(--muted); padding: 0 8px; }
+  .btn.quiet:hover { color: var(--text); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .message { margin: 0; font-size: 14px; color: var(--muted); }
+  .message.error { color: var(--fail); }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+  .stat { padding: 16px 18px; }
+  .stat-value { font-family: var(--mono); font-weight: 600; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .stat-label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .dots { display: flex; gap: 4px; margin-top: 8px; height: 10px; }
+  .dots i { flex: 1; border-radius: 3px; background: var(--pending); }
+  .dots i.passed { background: var(--pass); }
+  .dots i.failed { background: var(--fail); }
+  .dots i.running { background: var(--accent); }
+
+  /* Runs */
+  .runs { padding: 22px 22px 8px; margin-bottom: 14px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  h2 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+  .section-head p { margin: 0; color: var(--muted); font-size: 13px; }
+  .table-scroll { overflow-x: auto; margin: 0 -22px; padding: 0 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12.5px; padding: 0 10px 10px 0; white-space: nowrap; }
+  td { padding: 12px 10px 12px 0; border-top: 1px solid var(--line); vertical-align: middle; }
+  td.num { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.when { white-space: nowrap; }
+  .commit { display: flex; flex-direction: column; min-width: 0; }
+  .commit a { font-family: var(--mono); font-size: 12.5px; color: var(--accent); text-decoration: none; }
+  .commit a:hover { text-decoration: underline; }
+  .commit span { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+  .links { display: flex; gap: 4px; justify-content: flex-end; white-space: nowrap; }
+  .links a, .links button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); background: none; border-radius: 8px; padding: 4px 9px; font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none; cursor: pointer; }
+  .links a:hover, .links button:hover { border-color: var(--muted); }
+  .links svg { width: 14px; height: 14px; }
+  .links .off { color: var(--muted); border-style: dashed; cursor: default; }
+  .empty { color: var(--muted); margin: 0 0 16px; }
+
+  /* Lower */
+  .lower { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; padding-bottom: 40px; align-items: start; }
+  .block { padding: 22px; }
+  .flow { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: flow; display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+  .flow li { counter-increment: flow; display: grid; grid-template-columns: 28px 1fr; gap: 6px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .flow li::before { content: "0" counter(flow); font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--accent); line-height: 1.6; }
+  .flow b { display: block; font-weight: 600; }
+  .flow span { color: var(--muted); font-size: 13.5px; }
+  .source-list { margin: 12px 0 0; padding: 0; list-style: none; }
+  .source-list li { border-top: 1px solid var(--line); }
+  .source-list a { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; text-decoration: none; }
+  .source-list a:hover b { text-decoration: underline; }
+  .source-list b { font-weight: 600; }
+  .source-list code { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  footer { color: var(--muted); font-size: 13px; padding: 0 0 32px; }
+
+  /* Video dialog */
+  dialog { border: 0; padding: 0; border-radius: 16px; background: var(--surface); color: var(--text); width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+  dialog::backdrop { background: rgba(10, 10, 10, .6); }
+  .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .dialog-head b { font-weight: 600; }
+  .dialog-head .actions { gap: 4px; }
+  dialog video { display: block; width: 100%; background: #000; max-height: calc(100vh - 140px); }
+  .video-tabs { display: flex; gap: 6px; padding: 10px 18px; border-top: 1px solid var(--line); }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-side { border-left: 0; border-top: 1px solid var(--line); }
+    .lower { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 520px) {
+    .flow { grid-template-columns: 1fr; }
+    .btn.primary { width: 100%; }
+    .brand small { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    li.active .dot { animation: none; }
+    .bar span, .timer { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="26" rx="7" fill="#F26B1D"/><path d="M12 10v12l10-6z" fill="#fff"/></svg>
+      HRM Test Runner <small>by Pankaj</small>
+    </div>
+    <a class="gh" id="repo-link" href="#" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Source code
+    </a>
+  </header>
+
+  <main>
+    <section class="card hero" aria-labelledby="title">
+      <div class="hero-main">
+        <div class="title-row">
+          <h1 id="title">Employee lifecycle check</h1>
+          <span class="chip" id="chip">Loading</span>
+        </div>
+        <p class="target">Playwright on <code id="site"></code></p>
+        <div class="timer" id="timer">0:00</div>
+        <p class="caption" id="caption" aria-live="polite">Loading recent runs…</p>
+        <div class="bar hidden" id="bar" aria-hidden="true"><span id="bar-fill"></span></div>
+      </div>
+
+      <div class="hero-side">
+        <ol class="stages" id="stages" aria-label="Run progress"></ol>
+        <div>
+          <div class="actions" id="actions-idle">
+            <button class="btn primary" id="run-btn" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4.5v11l9-5.5z" fill="currentColor"/></svg>
+              Run automation
+            </button>
+            <a class="btn quiet" id="latest-report" href="#" target="_blank" rel="noopener">Latest report</a>
+          </div>
+          <div class="actions hidden" id="actions-running">
+            <a class="btn" id="logs-link" href="#" target="_blank" rel="noopener">Watch live logs on GitHub</a>
+          </div>
+          <div class="actions hidden" id="actions-done">
+            <a class="btn primary" id="report-link" href="#" target="_blank" rel="noopener">Open report</a>
+            <button class="btn" id="video-btn" type="button">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="4.5" width="15" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 7.8v4.4l3.8-2.2z" fill="currentColor"/></svg>
+              Watch video
+            </button>
+            <button class="btn quiet" id="again-btn" type="button">Run again</button>
+          </div>
+          <p class="message hidden" id="message" role="status" style="margin-top:12px"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Summary of the last 10 runs">
+      <div class="card stat"><div class="stat-value" id="stat-pass">–</div><div class="stat-label">Passed, last 10 runs</div><div class="dots" id="stat-dots"></div></div>
+      <div class="card stat"><div class="stat-value" id="stat-typical">–</div><div class="stat-label">Typical run time</div></div>
+      <div class="card stat"><div class="stat-value" id="stat-reports">–</div><div class="stat-label">Reports with video kept</div></div>
+      <div class="card stat"><div class="stat-value" id="stat-last">–</div><div class="stat-label">Since the last run</div></div>
+    </section>
+
+    <section class="card runs" aria-labelledby="runs-title">
+      <div class="section-head">
+        <h2 id="runs-title">Last 10 runs</h2>
+        <p>Each run keeps its HTML report, video and the exact source it tested.</p>
+      </div>
+      <div class="table-scroll">
+        <table id="runs-table" class="hidden">
+          <thead><tr><th>Result</th><th>Run</th><th>Started</th><th>Took</th><th>Trigger</th><th>Source</th><th style="text-align:right">Evidence</th></tr></thead>
+          <tbody id="runs-body"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="runs-empty">No runs yet. Start the first one above.</p>
+    </section>
+
+    <div class="lower">
+      <section class="card block">
+        <h2>What the automation does</h2>
+        <ol class="flow">
+          <li><div><b>Logs in as Admin</b><span>Dashboard, widgets and user menu load</span></div></li>
+          <li><div><b>Adds an employee</b><span>Name, unique ID and profile photo</span></div></li>
+          <li><div><b>Edits the job</b><span>Job title and status survive a reload</span></div></li>
+          <li><div><b>Checks the API</b><span>REST API v2 matches the UI grid</span></div></li>
+          <li><div><b>Deletes the employee</b><span>Gone from the list and the API</span></div></li>
+          <li><div><b>Logs out</b><span>Old session gets a 401</span></div></li>
+        </ol>
+      </section>
+      <section class="card block">
+        <h2>Source code</h2>
+        <ul class="source-list" id="source-list"></ul>
+      </section>
+    </div>
+  </main>
+
+  <footer>Runs on GitHub Actions. The last 10 reports and videos are published to GitHub Pages; logs stay on GitHub for 90 days.</footer>
+</div>
+
+<dialog id="video-dialog" aria-labelledby="video-title">
+  <div class="dialog-head">
+    <b id="video-title">Run video</b>
+    <div class="actions">
+      <a class="btn quiet" id="video-download" href="#" download>Download</a>
+      <button class="btn quiet" id="video-close" type="button">Close</button>
+    </div>
+  </div>
+  <video id="video-player" controls preload="metadata" playsinline></video>
+  <div class="video-tabs hidden" id="video-tabs"></div>
+</dialog>
+
+<script>
+  var CONFIG = /*__CONFIG__*/{};
+  var POLL_MS = 4000;
+  var DEFAULT_TYPICAL_MS = 150000;
+  var BASE_TITLE = 'HRM Test Runner';
+  var el = function (id) { return document.getElementById(id); };
+
+  var STAGES = [
+    ['queue', 'Queued on GitHub', 'Waiting for a runner'],
+    ['setup', 'Machine set up', 'Checkout, Node.js and packages'],
+    ['browser', 'Chromium installed', 'The browser Playwright drives'],
+    ['test', 'Tests running', 'Login to logout, recorded on video'],
+    ['report', 'Report published', 'HTML report and video on Pages']
+  ];
+  var STAGE_CAPTION = {
+    queue: 'Waiting for GitHub to pick up the run.',
+    setup: 'Setting up a fresh machine.',
+    browser: 'Installing Chromium.',
+    test: 'Logging in, adding, editing and deleting an employee.',
+    report: 'Publishing the report and video.'
+  };
+  var SOURCE_FILES = [
+    ['Test spec', 'tests/employee-lifecycle.spec.js'],
+    ['Page objects', 'pages'],
+    ['API client', 'api/EmployeeApiClient.js'],
+    ['Test data', 'test-data/employees.json'],
+    ['Workflow', '.github/workflows/e2e.yml']
+  ];
+  var RESULT_LABEL = { running: 'Running', passed: 'Passed', failed: 'Failed', cancelled: 'Cancelled' };
+  var HOW_LABEL = { workflow_dispatch: 'This page', push: 'Code push', pull_request: 'Pull request', schedule: 'Schedule' };
+
+  var state = { runs: [], typicalMs: DEFAULT_TYPICAL_MS, runId: null, run: null, tick: null, poll: null };
+
+  // ---- Utilities ----
+
+  function api(path, options) {
+    return fetch(path, options).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        if (!res.ok || body.error) throw new Error(body.error || ('The server answered ' + res.status + '.'));
+        return body;
+      });
+    });
+  }
+  function clockText(ms) {
+    var t = Math.max(0, Math.round(ms / 1000)), m = Math.floor(t / 60), s = t % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function durationWords(ms) {
+    var t = Math.max(0, Math.round(ms / 1000)), m = Math.floor(t / 60), s = t % 60;
+    return m ? m + ' min' + (s ? ' ' + s + ' s' : '') : s + ' s';
+  }
+  function ago(iso) {
+    var s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+    if (s < 60) return 'just now';
+    var m = Math.round(s / 60); if (m < 60) return m + ' min ago';
+    var h = Math.round(m / 60); if (h < 24) return h + ' hr ago';
+    var d = Math.round(h / 24); return d + (d === 1 ? ' day ago' : ' days ago');
+  }
+  function shortAgo(iso) {
+    var s = Math.max(0, (Date.now() - Date.parse(iso)) / 1000);
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + 'm';
+    if (s < 86400) return Math.round(s / 3600) + 'h';
+    return Math.round(s / 86400) + 'd';
+  }
+  function runDuration(run) {
+    if (!run.startedAt) return 0;
+    return (run.finishedAt ? Date.parse(run.finishedAt) : Date.now()) - Date.parse(run.startedAt);
+  }
+  function resultOf(run) {
+    if (run.status !== 'completed') return 'running';
+    if (run.testResult) return run.testResult === 'success' ? 'passed' : 'failed';
+    if (run.conclusion === 'success') return 'passed';
+    if (run.conclusion === 'cancelled') return 'cancelled';
+    return 'failed';
+  }
+  function make(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === 'text') node.textContent = props[k];
+      else if (k === 'html') node.innerHTML = props[k];
+      else node.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { if (c) node.append(c); });
+    return node;
+  }
+  function extLink(href, text, cls) {
+    return make('a', { href: href, target: '_blank', rel: 'noopener', text: text, class: cls || '' });
+  }
+  function showMessage(text, isError) { var m = el('message'); m.textContent = text; m.className = 'message' + (isError ? ' error' : ''); }
+  function hideMessage() { el('message').className = 'message hidden'; }
+  function setActions(which) {
+    ['idle', 'running', 'done'].forEach(function (n) { el('actions-' + n).classList.toggle('hidden', n !== which); });
+  }
+  function setChip(result) {
+    var chip = el('chip');
+    chip.className = 'chip' + (result === 'ready' ? '' : ' ' + result);
+    chip.textContent = result === 'ready' ? 'Ready' : RESULT_LABEL[result];
+  }
+  function setStages(stages) {
+    Array.prototype.forEach.call(el('stages').children, function (li) {
+      li.className = (stages && stages[li.dataset.stage]) || 'pending';
+    });
+  }
+  function setBar(fraction, result) {
+    var bar = el('bar');
+    bar.className = 'bar' + (result === 'passed' || result === 'failed' ? ' ' + result : '');
+    el('bar-fill').style.width = Math.round(Math.min(1, fraction) * 100) + '%';
+  }
+
+  // ---- Static parts ----
+
+  function renderStatic() {
+    el('repo-link').href = CONFIG.repoUrl;
+    el('latest-report').href = CONFIG.reportBase;
+    el('site').textContent = CONFIG.siteUrl;
+    var check = '<svg class="ok" viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var cross = '<svg class="no" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+    STAGES.forEach(function (s) {
+      var li = make('li', { class: 'pending', 'data-stage': s[0] }, [
+        make('span', { class: 'dot', html: check + cross }),
+        make('span', { class: 'stage-name', text: s[1] }, [make('span', { text: s[2] })])
+      ]);
+      el('stages').append(li);
+    });
+    SOURCE_FILES.forEach(function (f) {
+      var kind = f[1].indexOf('.') > 0 && f[1].split('/').pop().indexOf('.') > 0 ? 'blob' : 'tree';
+      var a = make('a', { href: CONFIG.repoUrl + '/' + kind + '/main/' + f[1], target: '_blank', rel: 'noopener' }, [
+        make('b', { text: f[0] }), make('code', { text: f[1] })
+      ]);
+      el('source-list').append(make('li', {}, [a]));
+    });
+  }
+
+  // ---- History ----
+
+  function loadHistory() {
+    return api('/api/history').then(function (data) {
+      state.runs = data.runs || [];
+      var finished = state.runs.filter(function (r) { return r.status === 'completed'; });
+      var passed = finished.filter(function (r) { return resultOf(r) === 'passed'; }).map(runDuration).sort(function (a, b) { return a - b; });
+      if (passed.length) state.typicalMs = passed[Math.floor(passed.length / 2)];
+      renderStats(finished);
+      renderRuns();
+      if (!state.runId) {
+        var active = state.runs.find(function (r) { return r.status !== 'completed'; });
+        if (active) trackRun(active.runId, 'A run is already in progress, so this page is following it.');
+        else renderIdle();
+      }
+    }).catch(function (err) {
+      if (!state.runId) {
+        setChip('ready');
+        el('caption').textContent = 'Could not load recent runs.';
+        showMessage(err.message, true);
+      }
+    });
+  }
+
+  function renderStats(finished) {
+    var passed = finished.filter(function (r) { return resultOf(r) === 'passed'; }).length;
+    el('stat-pass').textContent = finished.length ? passed + '/' + finished.length : '–';
+    el('stat-typical').textContent = finished.length ? clockText(state.typicalMs) : '–';
+    el('stat-reports').textContent = state.runs.filter(function (r) { return r.reportReady; }).length || '–';
+    el('stat-last').textContent = state.runs.length ? shortAgo(state.runs[0].startedAt) : '–';
+    var dots = el('stat-dots');
+    dots.replaceChildren();
+    state.runs.slice().reverse().forEach(function (r) {
+      dots.append(make('i', { class: resultOf(r), title: RESULT_LABEL[resultOf(r)] + ', ' + ago(r.startedAt) }));
+    });
+  }
+
+  var ICON_REPORT = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 1.5h5.5L13 5v9.5H4z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6.5 8.5h4M6.5 11h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  var ICON_VIDEO = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M6.8 6.2v3.6l3-1.8z" fill="currentColor"/></svg>';
+  var ICON_LOGS = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5h10M3 8h10M3 11.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+
+  function renderRuns() {
+    var body = el('runs-body');
+    body.replaceChildren();
+    el('runs-empty').classList.toggle('hidden', state.runs.length > 0);
+    el('runs-table').classList.toggle('hidden', state.runs.length === 0);
+
+    state.runs.forEach(function (run) {
+      var result = resultOf(run);
+      var links = make('div', { class: 'links' });
+      if (run.reportUrl) {
+        var rep = extLink(run.reportUrl, '');
+        rep.innerHTML = ICON_REPORT + 'Report';
+        links.append(rep);
+      } else {
+        links.append(make('a', {
+          class: 'off',
+          title: run.status === 'completed' ? 'No report was published for this run' : 'Available when the run finishes',
+          html: ICON_REPORT + 'Report'
+        }));
+      }
+      if (run.videos && run.videos.length) {
+        var vb = make('button', { type: 'button', html: ICON_VIDEO + 'Video' });
+        vb.addEventListener('click', function () { openVideo(run); });
+        links.append(vb);
+      } else {
+        links.append(make('button', { type: 'button', class: 'off', disabled: '', html: ICON_VIDEO + 'Video' }));
+      }
+      var logs = extLink(run.runUrl, '');
+      logs.innerHTML = ICON_LOGS + 'Logs';
+      links.append(logs);
+
+      var tr = make('tr', {}, [
+        make('td', {}, [make('span', { class: 'chip ' + result, text: RESULT_LABEL[result] })]),
+        make('td', { class: 'num', text: '#' + run.runNumber }),
+        make('td', { class: 'when', text: ago(run.startedAt), title: new Date(run.startedAt).toLocaleString() }),
+        make('td', { class: 'num', text: run.status === 'completed' ? clockText(runDuration(run)) : '…' }),
+        make('td', { text: HOW_LABEL[run.event] || run.event }),
+        make('td', {}, [make('div', { class: 'commit' }, [
+          make('a', { href: run.commit.treeUrl, target: '_blank', rel: 'noopener', text: run.commit.short, title: 'Browse the source at this commit' }),
+          make('span', { text: run.commit.message, title: run.commit.message })
+        ])]),
+        make('td', {}, [links])
+      ]);
+      body.append(tr);
+    });
+  }
+
+  // ---- Video player ----
+
+  function openVideo(run) {
+    var dialog = el('video-dialog');
+    var tabs = el('video-tabs');
+    el('video-title').textContent = 'Run #' + run.runNumber + ' · ' + RESULT_LABEL[resultOf(run)] + ' · ' + new Date(run.startedAt).toLocaleString();
+    tabs.replaceChildren();
+    tabs.classList.toggle('hidden', run.videos.length < 2);
+    function play(i) {
+      el('video-player').src = run.videos[i];
+      el('video-download').href = run.videos[i];
+      Array.prototype.forEach.call(tabs.children, function (b, j) { b.classList.toggle('primary', i === j); });
+    }
+    run.videos.forEach(function (_, i) {
+      var b = make('button', { type: 'button', class: 'btn', text: i === 0 ? 'Attempt 1' : 'Retry ' + i });
+      b.addEventListener('click', function () { play(i); });
+      tabs.append(b);
+    });
+    play(0);
+    dialog.showModal();
+  }
+  function closeVideo() {
+    el('video-player').pause();
+    el('video-dialog').close();
+  }
+  el('video-close').addEventListener('click', closeVideo);
+  el('video-dialog').addEventListener('close', function () { el('video-player').pause(); });
+  el('video-dialog').addEventListener('click', function (e) { if (e.target === e.currentTarget) closeVideo(); });
+
+  // ---- Idle ----
+
+  function renderIdle() {
+    setChip('ready');
+    setStages(null);
+    setActions('idle');
+    el('bar').classList.add('hidden');
+    el('timer').className = 'timer';
+    document.title = BASE_TITLE;
+    var last = state.runs.find(function (r) { return r.status === 'completed'; });
+    if (!last) {
+      el('timer').textContent = '0:00';
+      el('caption').textContent = 'No runs yet. Press Run automation to start the first one.';
+      return;
+    }
+    var result = resultOf(last);
+    el('timer').textContent = clockText(runDuration(last));
+    el('caption').replaceChildren(
+      make('strong', { text: 'Last run ' + (result === 'passed' ? 'passed' : result === 'cancelled' ? 'was cancelled' : 'failed') }),
+      ' in ' + durationWords(runDuration(last)) + ', ' + ago(last.startedAt) + '. A new run takes about ' + durationWords(state.typicalMs) + '.'
+    );
+  }
+
+  // ---- Running / finished ----
+
+  function trackRun(runId, note) {
+    clearTimeout(state.poll);
+    clearInterval(state.tick);
+    state.runId = String(runId);
+    state.run = null;
+    history.replaceState(null, '', '?run=' + state.runId);
+    setChip('running');
+    setStages({ queue: 'active' });
+    setActions('running');
+    el('logs-link').href = CONFIG.actionsUrl + state.runId;
+    el('timer').className = 'timer running';
+    el('timer').textContent = '0:00';
+    el('caption').textContent = 'Starting the run.';
+    el('bar').classList.remove('hidden');
+    setBar(0, 'running');
+    if (note) showMessage(note, false); else hideMessage();
+    state.tick = setInterval(renderClock, 1000);
+    poll();
+  }
+
+  function poll() {
+    api('/api/run/' + state.runId).then(function (run) {
+      state.run = run;
+      renderRun(run);
+      if (run.status !== 'completed') state.poll = setTimeout(poll, POLL_MS);
+    }).catch(function (err) {
+      showMessage(err.message + ' Trying again shortly.', true);
+      state.poll = setTimeout(poll, POLL_MS * 2);
+    });
+  }
+
+  function renderClock() {
+    var run = state.run;
+    if (!run || run.status === 'completed') return;
+    var elapsed = runDuration(run);
+    el('timer').textContent = clockText(elapsed);
+    setBar(Math.min(0.96, elapsed / state.typicalMs), 'running');
+    document.title = 'Running ' + clockText(elapsed) + ' · ' + BASE_TITLE;
+  }
+
+  function renderRun(run) {
+    setStages(run.stages);
+    el('logs-link').href = run.runUrl;
+    if (run.status !== 'completed') {
+      var key = STAGES.map(function (s) { return s[0]; }).find(function (k) { return run.stages[k] === 'active'; }) || 'queue';
+      el('caption').textContent = STAGE_CAPTION[key] + ' Usually about ' + durationWords(state.typicalMs) + ' in total.';
+      renderClock();
+      return;
+    }
+    // GitHub Pages takes a minute to deploy after the run completes; keep polling briefly for the report.
+    var justFinished = Date.now() - Date.parse(run.finishedAt) < 3 * 60 * 1000;
+    if (!run.reportReady && run.conclusion !== 'cancelled' && justFinished && (state.reportTries = (state.reportTries || 0) + 1) <= 30) {
+      el('caption').textContent = 'Finished. Waiting for GitHub Pages to serve the report…';
+      state.poll = setTimeout(poll, POLL_MS);
+      return;
+    }
+    state.reportTries = 0;
+    clearInterval(state.tick);
+    var result = resultOf(run);
+    var took = runDuration(run);
+    setChip(result);
+    el('timer').className = 'timer' + (result === 'failed' ? ' failed' : '');
+    el('timer').textContent = clockText(took);
+    setBar(1, result);
+    el('caption').replaceChildren(
+      make('strong', { text: result === 'passed' ? 'Every step passed' : result === 'cancelled' ? 'The run was cancelled' : 'The check failed' }),
+      result === 'passed'
+        ? ' in ' + durationWords(took) + '. The report has every step, screenshots and the video.'
+        : ' after ' + durationWords(took) + '. The report shows the failing step with a screenshot and the video.'
+    );
+    el('report-link').href = run.reportUrl || '#';
+    el('report-link').classList.toggle('hidden', !run.reportReady);
+    el('video-btn').classList.toggle('hidden', !(run.videos && run.videos.length));
+    el('video-btn').onclick = function () { openVideo(run); };
+    if (!run.reportReady && result !== 'cancelled') showMessage('The report could not be published for this run. The logs on GitHub have the details.', true);
+    else hideMessage();
+    setActions('done');
+    document.title = (result === 'passed' ? '✅ Passed' : '❌ ' + RESULT_LABEL[result]) + ' · ' + BASE_TITLE;
+    loadHistory();
+  }
+
+  // ---- Actions ----
+
+  function startRun() {
+    var btn = el('run-btn');
+    btn.disabled = true;
+    hideMessage();
+    api('/api/run', { method: 'POST' }).then(function (res) {
+      trackRun(res.runId, res.alreadyRunning ? 'A run was already in progress, so this page is following it.' : '');
+      loadHistory();
+    }).catch(function (err) {
+      showMessage(err.message, true);
+    }).finally(function () { btn.disabled = false; });
+  }
+  function resetToIdle() {
+    clearTimeout(state.poll);
+    clearInterval(state.tick);
+    state.runId = null;
+    state.run = null;
+    history.replaceState(null, '', location.pathname);
+    hideMessage();
+    renderIdle();
+  }
+
+  el('run-btn').addEventListener('click', startRun);
+  el('again-btn').addEventListener('click', resetToIdle);
+
+  renderStatic();
+  var fromUrl = new URLSearchParams(location.search).get('run');
+  if (fromUrl && /^\d+$/.test(fromUrl)) trackRun(fromUrl);
+  loadHistory();
+  setInterval(function () { if (!state.runId || (state.run && state.run.status === 'completed')) loadHistory(); }, 60000);
+</script>
+</body>
+</html>

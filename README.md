@@ -113,6 +113,42 @@ Or run Playwright directly: `npx playwright test --grep @e2e`.
   (`video: 'on'` in `playwright.config.js`).
 - **Trace:** kept for failed runs (`trace: 'retain-on-failure'`). Open it with `npx playwright show-trace <trace.zip>`.
 
+## Running from the web (test runner page)
+
+A small web page lets anyone start the suite with one click and browse the last 10 runs, each with its
+HTML report, video and the exact source commit it tested.
+
+```
+Browser ──► Cloudflare Worker (trigger-ui/) ──► GitHub Actions (.github/workflows/e2e.yml)
+                    ▲                                        │
+                    └──────── runs.json + reports ◄──── gh-pages branch ──► GitHub Pages
+```
+
+- **`.github/workflows/e2e.yml`** runs on `workflow_dispatch` (the page) and on pushes to `main`. The `Publish report`
+  job copies the report and videos to `gh-pages` under `runs/<run id>/`, updates `runs.json`, and deletes
+  anything older than the last 10 runs.
+- **`trigger-ui/`** is a Cloudflare Worker that serves the page and calls the GitHub API with a token kept server-side.
+  It only starts a new run when none is queued or running.
+
+**One-time setup**
+
+1. Push this repo, open **Actions** and run *Employee lifecycle e2e* once. This creates the `gh-pages` branch.
+2. **Settings > Pages**: set *Source* to *Deploy from a branch*, and choose `gh-pages` and `/ (root)`.
+3. Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) for this repository only, with
+   **Actions: Read and write** and **Contents: Read-only**.
+4. Deploy the Worker:
+
+   ```bash
+   cd trigger-ui
+   npm install
+   npx wrangler login
+   npx wrangler secret put GITHUB_TOKEN
+   npm run deploy
+   ```
+
+   Wrangler prints the page URL (`https://hrm-test-runner.<your-subdomain>.workers.dev`). To point the Worker at another
+   repo or branch, edit `[vars]` in `trigger-ui/wrangler.toml`.
+
 ## Performance testing (JMeter)
 
 `performance/Pankaj_Employee_Lifecycle.jmx` runs the same 6-step lifecycle at the HTTP/API level.

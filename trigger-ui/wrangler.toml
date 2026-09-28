@@ -1,0 +1,15 @@
+name = "hrm-test-runner"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+# index.html is bundled into the worker as a string
+rules = [{ type = "Text", globs = ["**/*.html"], fallthrough = false }]
+
+[vars]
+GITHUB_REPO = "pankajphoughat2/Pankaj_QA_Automation_Assessment"
+GITHUB_BRANCH = "main"
+WORKFLOW_FILE = "e2e.yml"
+TARGET_SITE = "opensource-demo.orangehrmlive.com"
+
+# Secret, set with: npx wrangler secret put GITHUB_TOKEN
+# (fine-grained token on this repo: Actions read/write, Contents read)

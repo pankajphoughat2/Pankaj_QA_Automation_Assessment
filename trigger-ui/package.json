@@ -1,0 +1,12 @@
+{
+  "name": "hrm-test-runner",
+  "private": true,
+  "description": "Web page that triggers the Playwright workflow and lists the last 10 reports and videos",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
